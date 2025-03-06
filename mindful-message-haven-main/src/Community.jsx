@@ -10,7 +10,7 @@ import Chat from "./pages/chat";
 import axios from "axios";
 import { Toaster } from "@/components/ui/sonner";
 import { useAppStore } from "./pages/store";
-import kawula from "/KawulaConnect.png";
+// import kawula from "./assets/";
 
 const ProtectedRoute = ({ children }) => {
   const { userInfo } = useAppStore();

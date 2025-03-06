@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import SelfCare from "./pages/SelfCare";
-import Community from "./Community"; // Ensure this path is correct
+import Community from "./pages/Community"; // Ensure this path is correct
 import Articles from "./pages/Articles";
 import HealthTracker from "./pages/HealthTracker";
 import Login from "./pages/Login";

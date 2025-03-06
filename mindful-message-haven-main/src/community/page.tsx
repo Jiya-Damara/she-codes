@@ -10,7 +10,7 @@ import Chat from "../pages/chat";
 import axios from "axios";
 import { Toaster } from "@/components/ui/sonner";
 import { useAppStore } from "../pages/store";
-import kawula from "/KawulaConnect.png";
+// import kawula from "/KawulaConnect.png";
 
 const ProtectedRoute = ({ children }) => {
   const { userInfo } = useAppStore();
@@ -83,7 +83,7 @@ const App = () => {
     return (
       <div className="h-full w-full text-slate-800 fixed top-0 z-[100] left-0 bg-white/20 flex gap-4 items-center justify-center flex-col backdrop-blur-lg">
         <div className="w-72 h-72">
-          <img src={kawula} alt="loading logo" className="animate-pulse" />
+          {/* <img src={kawula} alt="loading logo" className="animate-pulse" /> */}
         </div>
       </div>
     );

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Navigate } from "react-router-dom";
-import myImage from "@/assets/kawula.png";
+// import myImage from "@/assets/kawula.png";
 import { useAppStore } from "../store";
 import LoginForm from "./LoginForm";
 import RegisterForm from "./RegisterForm";

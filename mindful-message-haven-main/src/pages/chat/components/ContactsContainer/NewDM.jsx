@@ -17,7 +17,7 @@ import Lottie from "lottie-react";
 import { getColor } from "@/utils";
 import { FaPlus } from "react-icons/fa";
 import { Input } from "@/components/ui/input";
-import kawulaAnimation from "@/assets/kawulaAnimation";
+// import kawulaAnimation from "@/assets/kawulaAnimation";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { useAppStore } from "@/pages/store";
@@ -92,7 +92,7 @@ const NewDM = () => {
             <div className="flex flex-1 h-4 flex-col justify-center items-center transition-all duration-1000">
               <div className="">
                 <Lottie
-                  animationData={kawulaAnimation}
+                  // animationData={kawulaAnimation}
                   style={{ width: "300px", height: "300px" }}
                 />
               </div>

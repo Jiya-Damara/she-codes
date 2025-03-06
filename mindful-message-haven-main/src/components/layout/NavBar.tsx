@@ -34,7 +34,7 @@ export default function NavBar() {
         </Link>
         
         <div className="hidden md:flex items-center space-x-8">
-          <Link to="/" className={`nav-link ${isActive('/') ? 'active' : ''}`}>Home</Link>
+          <Link to="/home" className={`nav-link ${isActive('/') ? 'active' : ''}`}>Home</Link>
           <Link to="/community" className={`nav-link ${isActive('/community') ? 'active' : ''}`}>Community</Link>
           <Link to="/health-tracker" className={`nav-link ${isActive('/health-tracker') ? 'active' : ''}`}>Health Tracker</Link>
           <Link to="/articles" className={`nav-link ${isActive('/articles') ? 'active' : ''}`}>Articles</Link>
