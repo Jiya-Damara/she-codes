@@ -1,22 +1,26 @@
 
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useState } from "react";
+import { authService } from "@/services/auth";
 
 export default function Signup() {
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name || !email || !password) {
+    if (!firstName || !lastName || !email || !password) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -26,7 +30,36 @@ export default function Signup() {
       return;
     }
     
-    toast.success("Account created successfully!");
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters long");
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      console.log('Starting registration with:', { firstName, lastName, email, password: '***' });
+      const result = await authService.register({
+        firstName,
+        lastName,
+        email,
+        password
+      });
+      
+      console.log('Registration result:', result);
+      if (result.success) {
+        toast.success("Account created successfully! Please check your email for verification.");
+        navigate("/home");
+      } else {
+        toast.error(result.message || "Registration failed. Please try again.");
+      }
+    } catch (error) {
+      console.error('Registration error in component:', error);
+      const errorMessage = error.message || error.errors?.[0]?.msg || "Registration failed. Please try again.";
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -44,14 +77,25 @@ export default function Signup() {
           </div>
           
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input 
-                id="name" 
-                placeholder="Enter your full name" 
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input 
+                  id="firstName" 
+                  placeholder="Enter your first name" 
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input 
+                  id="lastName" 
+                  placeholder="Enter your last name" 
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                />
+              </div>
             </div>
             
             <div className="space-y-2">
@@ -97,8 +141,12 @@ export default function Signup() {
               </Label>
             </div>
             
-            <Button type="submit" className="w-full bg-brand hover:bg-brand-600 text-white">
-              Sign Up
+            <Button 
+              type="submit" 
+              className="w-full bg-brand hover:bg-brand-600 text-white"
+              disabled={isLoading}
+            >
+              {isLoading ? "Creating Account..." : "Sign Up"}
             </Button>
           </form>
           

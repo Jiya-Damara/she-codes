@@ -3,23 +3,80 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext"; // Updated path - make sure this matches your file structure
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { login, isAuthenticated } = useAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/home", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate inputs
     if (!email || !password) {
       toast.error("Please fill in all fields");
       return;
     }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
     
-    toast.success("Login successful");
-    navigate("/home"); // Navigate to the Home page after successful login
+    setIsLoading(true);
+    
+    try {
+      console.log("🔄 Attempting login for:", email);
+      
+      const BACKEND_URL = 'http://localhost:5000';
+      
+      const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const result = await response.json();
+      console.log("📝 Login response:", { status: response.status, result });
+      
+      if (response.ok && result.token && result.user) {
+        console.log("✅ Login successful");
+        
+        // Use the auth context login method
+        login(result.token, result.user);
+        
+        toast.success(`Welcome back! 🌸`);
+        
+        // Navigate to home page
+        console.log("🧭 Navigating to /home...");
+        navigate("/home", { replace: true });
+      } else {
+        // Handle login failure
+        console.error("❌ Login failed:", result);
+        const errorMessage = result.message || "Invalid email or password";
+        toast.error(errorMessage);
+      }
+    } catch (error) {
+      console.error("❌ Login error:", error);
+      toast.error("Network error. Please check your connection and try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -45,6 +102,8 @@ export default function Login() {
                 placeholder="Enter your email" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
               />
             </div>
             
@@ -61,11 +120,17 @@ export default function Login() {
                 placeholder="Enter your password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
               />
             </div>
             
-            <Button type="submit" className="w-full bg-brand hover:bg-brand-600 text-white">
-              Sign In
+            <Button 
+              type="submit" 
+              className="w-full bg-brand hover:bg-brand-600 text-white"
+              disabled={isLoading}
+            >
+              {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
           
