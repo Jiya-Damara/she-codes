@@ -46,7 +46,6 @@ const API_URL = `${API_BASE_URL}/health`;
 
 const getToken = () => {
   if (typeof window !== "undefined") {
-    // Check both localStorage and sessionStorage
     return localStorage.getItem("token") || sessionStorage.getItem("token");
   }
   return null;
@@ -143,7 +142,12 @@ export default function EnhancedHealthTracker() {
   const [activeTab, setActiveTab] = useState("dashboard")
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [authError, setAuthError] = useState<string | null>(null)
+  const [authError, setAuthError] = useState(null)
+
+  // Add refs to prevent duplicate saves and notifications
+  const saveTimeoutRef = useRef(null)
+  const lastSaveDataRef = useRef(null)
+  const notificationTimeoutRef = useRef(null) // Add this to prevent duplicate notifications
 
   // Cycle tracking state
   const [cycleData, setCycleData] = useState({
@@ -260,160 +264,197 @@ export default function EnhancedHealthTracker() {
   const [customSymptomsList, setCustomSymptomsList] = useState([])
   const customSymptomInputRef = useRef(null)
 
+  // Helper function to show notification only once
+  const showNotification = (message, type = 'success') => {
+    // Clear any existing notification timeout
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current)
+    }
+    
+    // Set a small delay to prevent duplicate notifications
+    notificationTimeoutRef.current = setTimeout(() => {
+      if (type === 'success') {
+        toast.success(message)
+      } else if (type === 'error') {
+        toast.error(message)
+      } else if (type === 'info') {
+        toast.info(message)
+      }
+    }, 100)
+  }
+
   // --- Load data from MongoDB on mount ---
- // --- Load data from MongoDB on mount ---
-useEffect(() => {
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      setAuthError(null);
-      
-      console.log("Starting data load...");
-      const data = await fetchHealthData();
-      console.log("Data loaded successfully");
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        setAuthError(null);
+        
+        console.log("Starting data load...");
+        const data = await fetchHealthData();
+        console.log("Data loaded successfully");
 
-      // Parse dates and set state
-      if (data.cycleData) {
-        setCycleData({
-          ...data.cycleData,
-          lastPeriod: new Date(data.cycleData.lastPeriod),
-          nextPeriod: new Date(data.cycleData.nextPeriod),
-          ovulation: new Date(data.cycleData.ovulation),
-        })
-      }
+        // Parse dates and set state
+        if (data.cycleData) {
+          setCycleData({
+            ...data.cycleData,
+            lastPeriod: new Date(data.cycleData.lastPeriod),
+            nextPeriod: new Date(data.cycleData.nextPeriod),
+            ovulation: new Date(data.cycleData.ovulation),
+          })
+        }
 
-      if (data.symptoms) {
-        setSymptoms(data.symptoms.map((s) => ({ ...s, date: s.date ? new Date(s.date) : new Date() })))
-      }
+        if (data.symptoms) {
+          setSymptoms(data.symptoms.map((s) => ({ ...s, date: s.date ? new Date(s.date) : new Date() })))
+        }
 
-      if (data.moods) {
-        setMoods(data.moods.map((m) => ({ ...m, date: m.date ? new Date(m.date) : new Date() })))
-      }
+        if (data.moods) {
+          setMoods(data.moods.map((m) => ({ ...m, date: m.date ? new Date(m.date) : new Date() })))
+        }
 
-      if (data.waterIntake) {
-        setWaterIntake(data.waterIntake.map((w) => ({ ...w, date: w.date ? new Date(w.date) : new Date() })))
-      }
+        if (data.waterIntake) {
+          setWaterIntake(data.waterIntake.map((w) => ({ ...w, date: w.date ? new Date(w.date) : new Date() })))
+        }
 
-      if (data.sleepData) {
-        setSleepData(data.sleepData.map((s) => ({ ...s, date: s.date ? new Date(s.date) : new Date() })))
-      }
+        if (data.sleepData) {
+          setSleepData(data.sleepData.map((s) => ({ ...s, date: s.date ? new Date(s.date) : new Date() })))
+        }
 
-      if (data.weightData) {
-        setWeightData(data.weightData.map((w) => ({ ...w, date: w.date ? new Date(w.date) : new Date() })))
-      }
+        if (data.weightData) {
+          setWeightData(data.weightData.map((w) => ({ ...w, date: w.date ? new Date(w.date) : new Date() })))
+        }
 
-      if (data.exerciseData) {
-        setExerciseData(data.exerciseData.map((e) => ({ ...e, date: e.date ? new Date(e.date) : new Date() })))
-      }
+        if (data.exerciseData) {
+          setExerciseData(data.exerciseData.map((e) => ({ ...e, date: e.date ? new Date(e.date) : new Date() })))
+        }
 
-      if (data.medications) {
-        setMedications(data.medications)
-      }
+        if (data.medications) {
+          setMedications(data.medications)
+        }
 
-      if (data.temperatureData) {
-        setTemperatureData(data.temperatureData.map((t) => ({ ...t, date: t.date ? new Date(t.date) : new Date() })))
-      }
+        if (data.temperatureData) {
+          setTemperatureData(data.temperatureData.map((t) => ({ ...t, date: t.date ? new Date(t.date) : new Date() })))
+        }
 
-      if (data.journalEntries) {
-        setJournalEntries(data.journalEntries.map((j) => ({ ...j, date: j.date ? new Date(j.date) : new Date() })))
-      }
+        if (data.journalEntries) {
+          setJournalEntries(data.journalEntries.map((j) => ({ ...j, date: j.date ? new Date(j.date) : new Date() })))
+        }
 
-      if (data.customSymptomsList) {
-        setCustomSymptomsList(data.customSymptomsList)
-      }
+        if (data.customSymptomsList) {
+          setCustomSymptomsList(data.customSymptomsList)
+        }
 
-      if (data.settings) {
-        setSettings(data.settings)
-      }
+        if (data.settings) {
+          setSettings(data.settings)
+        }
 
-      if (data.dailyWaterGoal) {
-        setDailyWaterGoal(data.dailyWaterGoal)
-      }
+        if (data.dailyWaterGoal) {
+          setDailyWaterGoal(data.dailyWaterGoal)
+        }
 
-      if (data.waterGlassSize) {
-        setWaterGlassSize(data.waterGlassSize)
+        if (data.waterGlassSize) {
+          setWaterGlassSize(data.waterGlassSize)
+        }
+      } catch (error) {
+        console.error("Failed to load data:", error);
+        
+        if (error.message === "Authentication required") {
+          setAuthError("Please log in to access your health data");
+        } else {
+          showNotification(`Failed to load saved data: ${error.message}`, 'error');
+        }
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Failed to load data:", error);
-      
-      if (error.message === "AUTHENTICATION_REQUIRED") {
-        setAuthError("Please log in to access your health data");
-      } else {
-        toast.error(`Failed to load saved data: ${error.message}`);
-      }
-    } finally {
-      setIsLoading(false);
     }
-  }
 
-  loadData()
-}, [])
+    loadData()
+  }, [])
 
-  // --- Save data to MongoDB whenever state changes ---
- // --- Save data to MongoDB whenever state changes ---
-useEffect(() => {
-  if (isLoading || authError) return // Don't save during initial load or if auth error
+  // --- FIXED: Save data to MongoDB with debouncing and duplicate prevention ---
+  useEffect(() => {
+    if (isLoading || authError) return // Don't save during initial load or if auth error
 
-  console.log("Data changed, scheduling save...");
-  
-  const saveData = async () => {
-    try {
-      setIsSaving(true)
-      const allData = {
-        cycleData,
-        symptoms,
-        moods,
-        waterIntake,
-        sleepData,
-        weightData,
-        exerciseData,
-        medications,
-        temperatureData,
-        journalEntries,
-        customSymptomsList,
-        settings,
-        dailyWaterGoal,
-        waterGlassSize,
-        lastUpdated: new Date().toISOString(),
-      }
-
-      console.log("Attempting to save data...");
-      await saveHealthData(allData)
-      console.log("Data saved successfully");
-    } catch (error) {
-      console.error("Failed to save data:", error)
-      
-      if (error.message === "AUTHENTICATION_REQUIRED") {
-        setAuthError("Session expired. Please log in again.");
-      } else {
-        toast.error(`Failed to save data: ${error.message}`);
-      }
-    } finally {
-      setIsSaving(false)
+    const allData = {
+      cycleData,
+      symptoms,
+      moods,
+      waterIntake,
+      sleepData,
+      weightData,
+      exerciseData,
+      medications,
+      temperatureData,
+      journalEntries,
+      customSymptomsList,
+      settings,
+      dailyWaterGoal,
+      waterGlassSize,
+      lastUpdated: new Date().toISOString(),
     }
-  }
 
-  // Debounce saves to avoid too many API calls
-  const timeoutId = setTimeout(saveData, 2000)
-  return () => clearTimeout(timeoutId)
-}, [
-  cycleData,
-  symptoms,
-  moods,
-  waterIntake,
-  sleepData,
-  weightData,
-  exerciseData,
-  medications,
-  temperatureData,
-  journalEntries,
-  customSymptomsList,
-  settings,
-  dailyWaterGoal,
-  waterGlassSize,
-  isLoading,
-  authError,
-])
+    // Convert to string to compare if data actually changed
+    const dataString = JSON.stringify(allData)
+    
+    // Skip if data hasn't changed
+    if (lastSaveDataRef.current === dataString) {
+      return
+    }
+    
+    lastSaveDataRef.current = dataString
+    console.log("Data changed, scheduling save...");
+    
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+    }
+
+    const saveData = async () => {
+      try {
+        setIsSaving(true)
+        console.log("Attempting to save data...");
+        await saveHealthData(allData)
+        console.log("Data saved successfully");
+        // Removed automatic save notification to prevent duplicates
+      } catch (error) {
+        console.error("Failed to save data:", error)
+        
+        if (error.message === "Authentication required") {
+          setAuthError("Session expired. Please log in again.");
+        } else {
+          showNotification(`Failed to save data: ${error.message}`, 'error');
+        }
+      } finally {
+        setIsSaving(false)
+      }
+    }
+
+    // Debounce saves to avoid too many API calls
+    saveTimeoutRef.current = setTimeout(saveData, 1500)
+    
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+    }
+  }, [
+    cycleData,
+    symptoms,
+    moods,
+    waterIntake,
+    sleepData,
+    weightData,
+    exerciseData,
+    medications,
+    temperatureData,
+    journalEntries,
+    customSymptomsList,
+    settings,
+    dailyWaterGoal,
+    waterGlassSize,
+    isLoading,
+    authError,
+  ])
 
   // Update cycle calculations
   useEffect(() => {
@@ -456,7 +497,7 @@ useEffect(() => {
     }))
   }
 
-  // Mood tracking functions
+  // FIXED: Mood tracking functions - single notification
   const logMood = () => {
     const moodToLog = {
       ...dailyMood,
@@ -464,8 +505,7 @@ useEffect(() => {
       date: date,
     }
     setMoods((prev) => [moodToLog, ...prev])
-    toast.success("Mood logged successfully!")
-
+    
     // Reset form
     setDailyMood({
       mood: "neutral",
@@ -475,9 +515,12 @@ useEffect(() => {
       notes: "",
       date: new Date(),
     })
+    
+    // Single notification using helper function
+    showNotification("Mood logged successfully!")
   }
 
-  // Water intake functions
+  // FIXED: Water intake functions - single notification  
   const addWater = (amount = waterGlassSize) => {
     const today = new Date().toDateString()
     const existingEntry = waterIntake.find((entry) => new Date(entry.date).toDateString() === today)
@@ -495,7 +538,8 @@ useEffect(() => {
       }
       setWaterIntake((prev) => [newEntry, ...prev])
     }
-    toast.success(`Added ${amount}ml of water!`)
+    // Single notification using helper function
+    showNotification(`Added ${amount}ml of water!`)
   }
 
   const getTodayWaterIntake = () => {
@@ -504,7 +548,7 @@ useEffect(() => {
     return todayEntry ? todayEntry.amount : 0
   }
 
-  // Sleep tracking functions
+  // FIXED: Sleep tracking functions - single notification
   const logSleep = () => {
     const sleepToLog = {
       ...sleepEntry,
@@ -513,7 +557,6 @@ useEffect(() => {
       duration: calculateSleepDuration(sleepEntry.bedtime, sleepEntry.wakeTime),
     }
     setSleepData((prev) => [sleepToLog, ...prev])
-    toast.success("Sleep data logged!")
 
     setSleepEntry({
       bedtime: "22:00",
@@ -522,6 +565,9 @@ useEffect(() => {
       notes: "",
       date: new Date(),
     })
+    
+    // Single notification using helper function
+    showNotification("Sleep data logged!")
   }
 
   const calculateSleepDuration = (bedtime, wakeTime) => {
@@ -536,10 +582,10 @@ useEffect(() => {
     return Math.round((diff / (1000 * 60 * 60)) * 10) / 10 // hours with 1 decimal
   }
 
-  // Weight tracking functions
+  // FIXED: Weight tracking functions - single notification
   const logWeight = () => {
     if (!weightEntry.weight) {
-      toast.error("Please enter your weight")
+      showNotification("Please enter your weight", 'error')
       return
     }
 
@@ -550,19 +596,21 @@ useEffect(() => {
       date: date,
     }
     setWeightData((prev) => [weightToLog, ...prev])
-    toast.success("Weight logged successfully!")
 
     setWeightEntry({
       weight: "",
       unit: "kg",
       date: new Date(),
     })
+    
+    // Single notification using helper function
+    showNotification("Weight logged successfully!")
   }
 
-  // Exercise tracking functions
+  // FIXED: Exercise tracking functions - single notification
   const logExercise = () => {
     if (!exerciseEntry.duration) {
-      toast.error("Please enter exercise duration")
+      showNotification("Please enter exercise duration", 'error')
       return
     }
 
@@ -574,7 +622,6 @@ useEffect(() => {
       date: date,
     }
     setExerciseData((prev) => [exerciseToLog, ...prev])
-    toast.success("Exercise logged successfully!")
 
     setExerciseEntry({
       type: "cardio",
@@ -584,12 +631,15 @@ useEffect(() => {
       notes: "",
       date: new Date(),
     })
+    
+    // Single notification using helper function
+    showNotification("Exercise logged successfully!")
   }
 
-  // Temperature tracking functions
+  // FIXED: Temperature tracking functions - single notification
   const logTemperature = () => {
     if (!temperatureEntry.temperature) {
-      toast.error("Please enter temperature")
+      showNotification("Please enter temperature", 'error')
       return
     }
 
@@ -600,19 +650,21 @@ useEffect(() => {
       date: date,
     }
     setTemperatureData((prev) => [tempToLog, ...prev])
-    toast.success("Temperature logged successfully!")
 
     setTemperatureEntry({
       temperature: "",
       time: "06:00",
       date: new Date(),
     })
+    
+    // Single notification using helper function
+    showNotification("Temperature logged successfully!")
   }
 
-  // Journal functions
+  // FIXED: Journal functions - single notification
   const saveJournalEntry = () => {
     if (!journalEntry.content.trim()) {
-      toast.error("Please write something in your journal")
+      showNotification("Please write something in your journal", 'error')
       return
     }
 
@@ -622,7 +674,6 @@ useEffect(() => {
       date: date,
     }
     setJournalEntries((prev) => [entryToSave, ...prev])
-    toast.success("Journal entry saved!")
 
     setJournalEntry({
       title: "",
@@ -630,12 +681,15 @@ useEffect(() => {
       mood: "neutral",
       date: new Date(),
     })
+    
+    // Single notification using helper function
+    showNotification("Journal entry saved!")
   }
 
-  // Medication functions
+  // FIXED: Medication functions - single notification
   const addMedication = () => {
     if (!medicationEntry.name.trim()) {
-      toast.error("Please enter medication name")
+      showNotification("Please enter medication name", 'error')
       return
     }
 
@@ -645,7 +699,6 @@ useEffect(() => {
       active: true,
     }
     setMedications((prev) => [medToAdd, ...prev])
-    toast.success("Medication added!")
 
     setMedicationEntry({
       name: "",
@@ -654,12 +707,15 @@ useEffect(() => {
       time: "08:00",
       notes: "",
     })
+    
+    // Single notification using helper function
+    showNotification("Medication added!")
   }
 
-  // Symptom functions (enhanced)
+  // FIXED: Symptom functions - single notification
   const handleLogSymptom = () => {
     if (!newSymptom.type) {
-      toast.error("Please select a symptom type")
+      showNotification("Please select a symptom type", 'error')
       return
     }
 
@@ -669,7 +725,6 @@ useEffect(() => {
       date: date,
     }
     setSymptoms((prev) => [symptomToLog, ...prev])
-    toast.success("Symptom logged successfully!")
 
     setNewSymptom({
       category: "physical",
@@ -678,18 +733,22 @@ useEffect(() => {
       date: new Date(),
       notes: "",
     })
+    
+    // Single notification using helper function
+    showNotification("Symptom logged successfully!")
   }
 
-  // Custom symptom functions
+  // FIXED: Custom symptom functions - single notification
   const handleAddCustomSymptom = () => {
     const trimmedSymptom = customSymptom.trim()
     if (trimmedSymptom && !customSymptomsList.includes(trimmedSymptom)) {
       setCustomSymptomsList((prev) => [...prev, trimmedSymptom])
       setCustomSymptom("")
-      toast.success("Custom symptom added!")
       if (customSymptomInputRef.current) {
         customSymptomInputRef.current.focus()
       }
+      // Single notification using helper function
+      showNotification("Custom symptom added!")
     }
   }
 
@@ -723,7 +782,7 @@ useEffect(() => {
     link.click()
 
     URL.revokeObjectURL(url)
-    toast.success("Data exported successfully!")
+    showNotification("Data exported successfully!")
   }
 
   const importData = (event) => {
@@ -774,9 +833,9 @@ useEffect(() => {
         if (importedData.dailyWaterGoal) setDailyWaterGoal(importedData.dailyWaterGoal)
         if (importedData.waterGlassSize) setWaterGlassSize(importedData.waterGlassSize)
 
-        toast.success("Data imported successfully!")
+        showNotification("Data imported successfully!")
       } catch (error) {
-        toast.error("Failed to import data. Please check the file format.")
+        showNotification("Failed to import data. Please check the file format.", 'error')
       }
     }
     reader.readAsText(file)
@@ -901,6 +960,18 @@ useEffect(() => {
     const total = lastWeek.reduce((sum, entry) => sum + entry.duration, 0)
     return Math.round((total / lastWeek.length) * 10) / 10
   }
+
+  // Cleanup function to clear timeouts
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+      if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current)
+      }
+    }
+  }, [])
 
  // Show loading state
 if (isLoading) {
@@ -1237,7 +1308,7 @@ if (authError) {
                             currentPhase: "Menstrual",
                             currentDay: 1,
                           }))
-                          toast.success("Period logged successfully!")
+                          showNotification("Period logged successfully!")
                         }}
                       >
                         <DropletIcon className="mr-2 h-4 w-4" />
